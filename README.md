@@ -1,4 +1,4 @@
-# Flux_gradio_generator
+# MFlux_gradio_generator
 Using FLux1 image generator with MLX for local inference.
 Current example is generated using schnell version. Swap for dev version to get more realistic images
 
