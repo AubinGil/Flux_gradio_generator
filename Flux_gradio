@@ -1,0 +1,63 @@
+# ✅ Step 1: Set cache paths to use external drive
+import os
+external_drive = "/Volumes/My Passport for Mac"
+os.environ["HF_HOME"] = f"{external_drive}/.hf_cache"
+os.environ["MFLUX_CACHE_DIR"] = f"{external_drive}/.mflux_cache"
+
+# ✅ Step 2: Log in to Hugging Face
+from huggingface_hub import login
+login(token="________________________")  # <-- replace with your token
+
+# ✅ Step 3: Load the model with quantization
+from mflux.flux.flux import Flux1
+flux = Flux1.from_name(model_name="dev", quantize=8)  # 8-bit quantization
+
+# ✅ Step 4: Save the model to external drive
+save_path = f"{external_drive}/flux_weights/"
+os.makedirs(save_path, exist_ok=True)
+flux.save_model(save_path)
+
+import gradio as gr
+from mflux.config.model_config import ModelConfig
+from mflux.config.config import Config
+from mflux.flux.flux import Flux1
+from PIL import Image
+
+
+# Step 1: Prepare model
+model_config = ModelConfig(
+    alias="schnell_local",
+    model_name="schnell",
+    base_model="schnell_base",
+    controlnet_model=None,
+    custom_transformer_model=None,
+    num_train_steps=1000,
+    max_sequence_length=128,
+    supports_guidance=True,
+    requires_sigma_shift=False,
+    priority=1
+)
+
+config = Config()
+flux = Flux1(model_config=model_config, local_path="/Volumes/My Passport for Mac/flux_weights/")
+
+# Step 2: Define generation function
+def generate_and_resize(prompt, seed, size):
+    image_obj = flux.generate_image(seed, prompt, config)
+    resized = image_obj.image.resize((size, size))
+    return resized
+
+# Step 3: Launch Gradio app
+demo = gr.Interface(
+    fn=generate_and_resize,
+    inputs=[
+        gr.Textbox(label="Prompt", value="A magical night-time alpine landscape..."),
+        gr.Number(label="Seed", value=42),
+        gr.Slider(256, 1048, value=512, label="Resize (px)")
+    ],
+    outputs=gr.Image(type="pil"),
+    title="Flux1 Fantasy Image Generator",
+    description="Generated imagination ✨"
+)
+
+demo.launch(share=True)
